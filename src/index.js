@@ -1,5 +1,6 @@
-// require("dotenv").config();
-const express = require('express');
+ const express = require('express');
+ const amqp = require("amqplib");
+ const queueName = "email_queue";
  
 
 const { ServerConfig } = require('./config');
@@ -11,22 +12,24 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+ const connect = async () => {
+    try {
+        const connection = await amqp.connect("amqp://guest:guest@localhost");
+        const channel = await connection.createChannel();
+        await channel.assertQueue(queueName);
+        setInterval(()=>{
+        channel.sendToQueue(queueName, Buffer.from("Hello World"));
+        },1000)
+        return channel;
+    } catch (error) {
+        console.log(error);
+    }
+}
+
 app.use('/api', apiRoutes);
 
 app.listen(ServerConfig.PORT, async () => {
     console.log(`Successfully started the server on PORT : ${ServerConfig.PORT}`);
-    // try {
-    //     const response = await mailSender.sendMail({
-    //         from : ServerConfig.GMAIL_EMAIL,
-    //         to : 'abdullahch8860@gmail.com',
-    //         subject : 'Hello',
-    //         text:'node mailer testing'
-
-    //     })
-    //     console.log(response)
-    // } catch (error) {
-    //     console.log(error)
-    // }
-        
-    
+    connect();
+    console.log("connected to raabit");
 });
